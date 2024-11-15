@@ -3,42 +3,54 @@ import { FaArrowUp } from "react-icons/fa";
 import axios from "axios";
 import "./App.css";
 import logo from "./assets/CDlogo.png";
+import Chats from "../components/chat";
 
 type Payload = {
   code: string;
   url: string;
 };
 
+enum Role {
+  User,
+  AiResponse,
+}
+
 export default function App() {
   const apiUrl = import.meta.env.VITE_API_URL;
-  const [userAnswer, setUserAnswer] = useState("");
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [userAnswer, setUserAnswer] = useState<string>("");
+  const [answers, setAnswers] = useState<Array<{ role: Role; text: string }>>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   async function handleSubmit() {
     if (userAnswer.trim() !== "") {
-      setAnswers([...answers, userAnswer]);
+      // Add the user's message to the chat
+      setAnswers([...answers, { role: Role.User, text: userAnswer }]);
       setUserAnswer("");
       setLoading(true);
 
       const url = window.location.href;
       const payloadEncoded = url.split("?LC=")[1];
+
       if (payloadEncoded) {
-        const payload = JSON.parse(
-          atob(decodeURIComponent(payloadEncoded))
-        ) as Payload;
+        const payload = JSON.parse(atob(decodeURIComponent(payloadEncoded))) as Payload;
 
         try {
+          // Send the request to the backend
           const response = await axios.post(apiUrl, {
             useranswer: payload.code,
             url: payload.url,
           });
 
+          // Extract and format the AI's response
           const aiResponseText = response.data.aiResponse;
           const formattedResponse = aiResponseText.replace(/\n/g, "<br/>");
 
-          setAnswers([...answers, formattedResponse]);
+          // Add the AI's response to the chat
+          setAnswers((prevAnswers) => [
+            ...prevAnswers,
+            { role: Role.AiResponse, text: formattedResponse },
+          ]);
         } catch (error) {
           console.error("Error sending input:", error);
         }
@@ -74,17 +86,13 @@ export default function App() {
         {/* Messages */}
         <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
           {answers.map((answer, index) => (
-            <div
-              key={index}
-              className="bg-gray-700 p-4 rounded-lg text-white mb-3 shadow-md"
-              dangerouslySetInnerHTML={{ __html: answer }}
-            />
+            <Chats key={index} role={answer.role} text={answer.text} />
           ))}
           <div ref={endOfMessagesRef} />
         </div>
 
         {/* Input Area */}
-        <div className="flex items-center mt-4 border-2 border-gray-500 rounded-full bg-gray-700 shadow-lg">
+        <div className="flex items-center mt-4 border-2 border-gray-500 rounded-full  shadow-lg">
           <input
             type="text"
             placeholder="Type your answer here..."
