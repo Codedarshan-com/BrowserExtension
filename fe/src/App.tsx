@@ -1,92 +1,130 @@
 import { useState, useRef, useEffect } from "react";
 import { FaArrowUp } from "react-icons/fa";
-import axios from 'axios';
+import axios from "axios";
+import "./App.css";
+import logo from "./assets/CDlogo.png";
 
 type Payload = {
-	code: string;
-	url: string;
-}
+  code: string;
+  url: string;
+};
 
 export default function App() {
-	const apiUrl = import.meta.env.VITE_API_URL;
-	const [userAnswer, setUserAnswer] = useState("");
-	const [answers, setAnswers] = useState<string[]>([userAnswer]);
-	const [loading, setLoading] = useState<boolean>(false);
-	const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const [userAnswer, setUserAnswer] = useState("");
+  const [answers, setAnswers] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
-	async function handleSubmit() {
-		if (userAnswer.trim() !== "") {
-			setAnswers([...answers, userAnswer]);
-			setUserAnswer("");
-			setLoading(true);
+  async function handleSubmit() {
+    if (userAnswer.trim() !== "") {
+      setAnswers([...answers, userAnswer]);
+      setUserAnswer("");
+      setLoading(true);
 
-			// Extract and decode the payload from the URL
-			const url = window.location.href;
-			const payloadEncoded = url.split("?LC=")[1];
-			if (payloadEncoded) {
-				const payload = JSON.parse(atob(decodeURIComponent(payloadEncoded))) as Payload;
+      const url = window.location.href;
+      const payloadEncoded = url.split("?LC=")[1];
+      if (payloadEncoded) {
+        const payload = JSON.parse(
+          atob(decodeURIComponent(payloadEncoded))
+        ) as Payload;
 
-				try {
-					// Send the request to the backend
-					const response = await axios.post(apiUrl, {
-						useranswer: payload.code,
-						url: payload.url
-					});
+        try {
+          const response = await axios.post(apiUrl, {
+            useranswer: payload.code,
+            url: payload.url,
+          });
 
-					// Extract the text content from the response and format line breaks
-					const aiResponseText = response.data.aiResponse;
-					const formattedResponse = aiResponseText.replace(/\n/g, "<br/>");
+          const aiResponseText = response.data.aiResponse;
+          const formattedResponse = aiResponseText.replace(/\n/g, "<br/>");
 
-					// Add the AI response to the answers
-					setAnswers([...answers, formattedResponse]);
-				} catch (error) {
-					console.error("Error sending input:", error);
-				}
-			}
+          setAnswers([...answers, formattedResponse]);
+        } catch (error) {
+          console.error("Error sending input:", error);
+        }
+      }
 
-			setLoading(false);
-		}
-	}
+      setLoading(false);
+    }
+  }
 
+  useEffect(() => {
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [answers]);
 
-	useEffect(() => {
-		if (endOfMessagesRef.current) {
-			endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
-		}
-	}, [answers]);
+  return (
+    <div className="flex flex-col h-screen bg-gradient-to-br bg-customBackground text-white">
+      {/* Top Bar */}
+      <div className="flex justify-between items-center px-6 py-4 bg-gray-800 shadow-lg">
+        <img src={logo} alt="CodeDarshan" className="h-12 object-contain" />
+        <h1 className="text-2xl font-bold text-white">Algoezy</h1>
+      </div>
 
-	return (
-		<div className="flex h-screen">
-			<div className="flex flex-col justify-between w-full h-full border-4 border-black p-4 rounded-lg bg-gray-800">
-				<h1 className="text-white mb-4">Stuck? Here are some hints :) <br /> you dont need to copy paste your solution</h1>
+      {/* Quote */}
+      <div className="text-center my-2">
+        <p className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">
+          Work Hard, Stay Smart!
+        </p>
+      </div>
 
-				<div className="text-white mt-4 overflow-y-auto" style={{ maxHeight: 'calc(100% - 130px)' }}>
-					{answers.map((answer, index) => (
-						<div key={index} className="message-container" dangerouslySetInnerHTML={{ __html: answer }} />
-					))}
-					<div ref={endOfMessagesRef} />
-				</div>
+      {/* Chat Section */}
+      <div className="flex-grow flex flex-col justify-between px-4 pb-6">
+        {/* Messages */}
+        <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+          {answers.map((answer, index) => (
+            <div
+              key={index}
+              className="bg-gray-700 p-4 rounded-lg text-white mb-3 shadow-md"
+              dangerouslySetInnerHTML={{ __html: answer }}
+            />
+          ))}
+          <div ref={endOfMessagesRef} />
+        </div>
 
+        {/* Input Area */}
+        <div className="flex items-center mt-4 border-2 border-gray-500 rounded-full bg-gray-700 shadow-lg">
+          <input
+            type="text"
+            placeholder="Type your answer here..."
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            className="bg-transparent flex-grow border-none outline-none text-white placeholder-gray-400 px-4 text-lg"
+          />
 
-
-				<div className="flex items-center border-2 border-slate-400 rounded-lg p-2 bg-gray-700 mt-auto">
-					<input
-						type="text"
-						placeholder="Type your answer here"
-						value={userAnswer}
-						onChange={(e) => setUserAnswer(e.target.value)}
-						className="bg-transparent flex-grow border-none outline-none text-white placeholder-gray-400 mr-2 h-12 resize-none"
-					/>
-
-					<button
-						onClick={handleSubmit}
-						className="text-white p-2 rounded-full bg-slate-700 hover:bg-slate-500"
-						disabled={loading}
-					>
-						{loading ? "Loading..." : <FaArrowUp />}
-					</button>
-				</div>
-			</div>
-		</div>
-	);
+          <button
+            onClick={handleSubmit}
+            className={`p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-110 hover:shadow-lg transition-all duration-300 ease-in-out disabled:opacity-50`}
+            disabled={loading}
+          >
+            {loading ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                ></path>
+              </svg>
+            ) : (
+              <FaArrowUp size={20} className="text-white" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
